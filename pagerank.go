@@ -4,28 +4,27 @@ import (
 	"math"
 )
 
+// Pagerank is pagerank calculator
 type Pagerank struct {
-	Matrix   [][]uint64        // 节点被哪些节点指向
-	Links    []uint64          // 节点指向数量
-	Keymap   map[string]uint64 // 外键映射索引
-	Rekeymap []string          // 索引映射外键
+	Matrix   [][]uint64
+	Links    []uint64
+	Keymap   map[string]uint64
+	Rekeymap []string
 }
 
+// NewPagerank Create a pagerank calculator
 func NewPagerank() *Pagerank {
-	pr := &Pagerank{}
-	pr.Matrix = [][]uint64{}
-	pr.Links = []uint64{}
-	pr.Keymap = map[string]uint64{}
-	pr.Rekeymap = []string{}
-	return pr
+	return &Pagerank{
+		Keymap: map[string]uint64{},
+	}
 }
 
-// 页面总数
+// Len returns total number of pages
 func (pr *Pagerank) Len() int {
 	return len(pr.Rekeymap)
 }
 
-// 创建连接指向
+// Link mark a link
 func (pr *Pagerank) Link(from, to string) {
 	fromIndex := pr.keyIndex(from)
 	toIndex := pr.keyIndex(to)
@@ -33,9 +32,9 @@ func (pr *Pagerank) Link(from, to string) {
 	pr.updateLinksNum(fromIndex)
 }
 
-// 开始计算分数
+// Rank calculate rank
 func (pr *Pagerank) Rank(followingProb, tolerance float64, resultFunc func(label string, rank float64)) {
-	size := len(pr.Rekeymap)
+	size := pr.Len()
 	invSize := 1.0 / float64(size)
 	overSize := (1.0 - followingProb) / float64(size)
 	existLinks := pr.getExistLinks()
@@ -56,7 +55,7 @@ func (pr *Pagerank) Rank(followingProb, tolerance float64, resultFunc func(label
 	}
 }
 
-// 键到内部索引绑定
+// keyIndex
 func (pr *Pagerank) keyIndex(key string) uint64 {
 	index, ok := pr.Keymap[key]
 
@@ -69,7 +68,7 @@ func (pr *Pagerank) keyIndex(key string) uint64 {
 	return index
 }
 
-// 更新矩阵
+// updateMatrix
 func (pr *Pagerank) updateMatrix(fromAsIndex, toAsIndex uint64) {
 	if missingSlots := len(pr.Keymap) - len(pr.Matrix); missingSlots > 0 {
 		pr.Matrix = append(pr.Matrix, make([][]uint64, missingSlots)...)
@@ -77,7 +76,7 @@ func (pr *Pagerank) updateMatrix(fromAsIndex, toAsIndex uint64) {
 	pr.Matrix[toAsIndex] = append(pr.Matrix[toAsIndex], fromAsIndex)
 }
 
-// 更新节点指向数量
+// updateLinksNum
 func (pr *Pagerank) updateLinksNum(fromAsIndex uint64) {
 	if missingSlots := len(pr.Keymap) - len(pr.Links); missingSlots > 0 {
 		pr.Links = append(pr.Links, make([]uint64, missingSlots)...)
@@ -85,7 +84,7 @@ func (pr *Pagerank) updateLinksNum(fromAsIndex uint64) {
 	pr.Links[fromAsIndex] += 1
 }
 
-// 获取所有 有指向的节点
+// getExistLinks
 func (pr *Pagerank) getExistLinks() []int {
 	danglingNodes := make([]int, 0, len(pr.Links))
 
@@ -97,7 +96,7 @@ func (pr *Pagerank) getExistLinks() []int {
 	return danglingNodes
 }
 
-// 计算步骤
+// step
 func (pr *Pagerank) step(followingProb, overSize float64, existLinks []int, result []float64) []float64 {
 	sumLinks := 0.0
 	for _, v := range existLinks {
@@ -126,7 +125,7 @@ func (pr *Pagerank) step(followingProb, overSize float64, existLinks []int, resu
 	return newResult
 }
 
-// 计算公差
+// calculateTolerance
 func calculateTolerance(result, newResult []float64) float64 {
 	acc := 0.0
 	for i, v := range result {
